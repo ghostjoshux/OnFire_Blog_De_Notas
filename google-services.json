@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "621782365839",
+    "project_id": "blog-de-notas-onfire",
+    "storage_bucket": "blog-de-notas-onfire.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:621782365839:android:96fdaa5f859c994e07a2fa",
+        "android_client_info": {
+          "package_name": "com.example.onfire_blog_de_notas"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBejpVlOrTs2lF26SLHxsZ8VBV0uRdroY0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
