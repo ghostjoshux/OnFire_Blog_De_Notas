@@ -51,6 +51,7 @@ fun RegisterScreen(
     var correo by remember { mutableStateOf("") }
     var contrasena by remember { mutableStateOf("") }
     var confirmarContrasena by remember { mutableStateOf("") }
+    var isLoading by remember { mutableStateOf(false) }
 
     Box(
         modifier = Modifier
@@ -145,11 +146,19 @@ fun RegisterScreen(
                         } else if (contrasena != confirmarContrasena) {
                             Toast.makeText(context, "Las contraseñas no coinciden", Toast.LENGTH_SHORT).show()
                         } else {
-                            AuthManager.registerUser(context, nombre, correo, contrasena)
-                            Toast.makeText(context, "Se registro correctamente", Toast.LENGTH_SHORT).show()
-                            onRegisterSuccess()
+                            isLoading = true
+                            AuthManager.registerUserWithFirebase(context, nombre, correo, contrasena) { success, errorMsg ->
+                                isLoading = false
+                                if (success) {
+                                    Toast.makeText(context, "Se registró correctamente con Firebase", Toast.LENGTH_SHORT).show()
+                                    onRegisterSuccess()
+                                } else {
+                                    Toast.makeText(context, errorMsg ?: "Error al registrarse", Toast.LENGTH_SHORT).show()
+                                }
+                            }
                         }
                     },
+                    enabled = !isLoading,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(54.dp)

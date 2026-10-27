@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">OnFire</string>
+    <string name="default_web_client_id" translatable="false">621782365839-YOUR_WEB_CLIENT_ID.apps.googleusercontent.com</string>
 </resources>
