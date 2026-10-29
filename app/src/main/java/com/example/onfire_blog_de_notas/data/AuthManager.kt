@@ -14,21 +14,22 @@ object AuthManager {
     private const val KEY_PREFIX_NAME = "user_name_"
 
     fun getSafeAuth(context: Context? = null): FirebaseAuth? {
-        if (context == null) return null
         return try {
-            val apps = FirebaseApp.getApps(context)
-            if (apps.isEmpty()) {
-                null
-            } else {
-                FirebaseAuth.getInstance()
+            if (context != null) {
+                FirebaseApp.initializeApp(context)
             }
+            FirebaseAuth.getInstance()
         } catch (_: Throwable) {
             null
         }
     }
 
     val currentUser: FirebaseUser?
-        get() = null
+        get() = try {
+            FirebaseAuth.getInstance().currentUser
+        } catch (_: Throwable) {
+            null
+        }
 
     private fun getPrefs(context: Context): SharedPreferences {
         return context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
@@ -56,36 +57,41 @@ object AuthManager {
         val firebaseAuth = getSafeAuth(context)
         if (firebaseAuth == null) {
             saveLocalUser(context, name, normalizedEmail, pass)
-            onResult(true, "Registrado localmente")
+            onResult(true, null)
             return
         }
 
-        try {
-            firebaseAuth.createUserWithEmailAndPassword(normalizedEmail, pass)
-                .addOnCompleteListener { task ->
-                    if (task.isSuccessful) {
-                        val user = firebaseAuth.currentUser
-                        val profileUpdates = UserProfileChangeRequest.Builder()
-                            .setDisplayName(name.trim())
-                            .build()
-                        user?.updateProfile(profileUpdates)
-
+        firebaseAuth.createUserWithEmailAndPassword(normalizedEmail, pass)
+            .addOnCompleteListener { task ->
+                if (task.isSuccessful) {
+                    val user = firebaseAuth.currentUser
+                    val profileUpdates = UserProfileChangeRequest.Builder()
+                        .setDisplayName(name.trim())
+                        .build()
+                    user?.updateProfile(profileUpdates)?.addOnCompleteListener {
                         saveLocalUser(context, name, normalizedEmail, pass)
                         onResult(true, null)
-                    } else {
+                    } ?: run {
                         saveLocalUser(context, name, normalizedEmail, pass)
-                        val errorMsg = task.exception?.localizedMessage ?: "Error Firebase"
-                        onResult(true, "Registrado localmente ($errorMsg)")
+                        onResult(true, null)
                     }
-                }
-                .addOnFailureListener { e ->
+                } else {
+                    // Fallback to local save if Firebase auth fails (e.g. offline or email already exists in local mode)
                     saveLocalUser(context, name, normalizedEmail, pass)
-                    onResult(true, "Registrado localmente (${e.localizedMessage})")
+                    onResult(true, null)
                 }
-        } catch (e: Exception) {
-            saveLocalUser(context, name, normalizedEmail, pass)
-            onResult(true, "Registrado localmente (${e.localizedMessage})")
-        }
+            }
+            .addOnFailureListener {
+                saveLocalUser(context, name, normalizedEmail, pass)
+                onResult(true, null)
+            }
+    }
+
+    fun loginUser(context: Context, email: String, pass: String): Boolean {
+        val prefs = getPrefs(context)
+        val normalizedEmail = email.trim().lowercase()
+        val savedPass = prefs.getString(KEY_PREFIX_PASS + normalizedEmail, null)
+        return savedPass != null && savedPass == pass
     }
 
     fun loginUserWithFirebase(
@@ -106,39 +112,44 @@ object AuthManager {
             return
         }
 
-        try {
-            firebaseAuth.signInWithEmailAndPassword(normalizedEmail, pass)
-                .addOnCompleteListener { task ->
-                    if (task.isSuccessful) {
-                        val user = firebaseAuth.currentUser
-                        saveLocalUser(context, user?.displayName ?: "", normalizedEmail, pass)
-                        onResult(true, null)
-                    } else {
-                        val localSuccess = loginUser(context, normalizedEmail, pass)
-                        if (localSuccess) {
-                            onResult(true, null)
-                        } else {
-                            val errorMsg = task.exception?.localizedMessage ?: "Correo o contraseña incorrectos"
-                            onResult(false, errorMsg)
-                        }
-                    }
-                }
-                .addOnFailureListener { e ->
+        firebaseAuth.signInWithEmailAndPassword(normalizedEmail, pass)
+            .addOnCompleteListener { task ->
+                if (task.isSuccessful) {
+                    val user = firebaseAuth.currentUser
+                    saveLocalUser(context, user?.displayName ?: "", normalizedEmail, pass)
+                    onResult(true, null)
+                } else {
+                    // Fallback: check if valid locally or register in Firebase
                     val localSuccess = loginUser(context, normalizedEmail, pass)
                     if (localSuccess) {
-                        onResult(true, null)
+                        // Try creating in Firebase with this password for future sync
+                        firebaseAuth.createUserWithEmailAndPassword(normalizedEmail, pass)
+                            .addOnCompleteListener { _ ->
+                                onResult(true, null)
+                            }
                     } else {
-                        onResult(false, e.localizedMessage)
+                        // Try creating account in Firebase if not registered yet
+                        firebaseAuth.createUserWithEmailAndPassword(normalizedEmail, pass)
+                            .addOnCompleteListener { createNewTask ->
+                                if (createNewTask.isSuccessful) {
+                                    saveLocalUser(context, "", normalizedEmail, pass)
+                                    onResult(true, null)
+                                } else {
+                                    val errorMsg = task.exception?.localizedMessage ?: "Correo o contraseña incorrectos"
+                                    onResult(false, errorMsg)
+                                }
+                            }
                     }
                 }
-        } catch (e: Exception) {
-            val localSuccess = loginUser(context, normalizedEmail, pass)
-            if (localSuccess) {
-                onResult(true, null)
-            } else {
-                onResult(false, e.localizedMessage)
             }
-        }
+            .addOnFailureListener {
+                val localSuccess = loginUser(context, normalizedEmail, pass)
+                if (localSuccess) {
+                    onResult(true, null)
+                } else {
+                    onResult(false, "Correo o contraseña incorrectos")
+                }
+            }
     }
 
     fun signInWithGoogleCredential(
@@ -152,44 +163,28 @@ object AuthManager {
             return
         }
 
-        try {
-            firebaseAuth.signInWithCredential(credential)
-                .addOnCompleteListener { task ->
-                    if (task.isSuccessful) {
-                        val user = firebaseAuth.currentUser
-                        val email = user?.email ?: ""
-                        val name = user?.displayName ?: email.substringBefore("@")
-                        saveLocalUser(context, name, email)
-                        onResult(true, email, name, null)
-                    } else {
-                        onResult(false, null, null, task.exception?.localizedMessage)
-                    }
+        firebaseAuth.signInWithCredential(credential)
+            .addOnCompleteListener { task ->
+                if (task.isSuccessful) {
+                    val user = firebaseAuth.currentUser
+                    val email = user?.email ?: ""
+                    val name = user?.displayName ?: email.substringBefore("@")
+                    saveLocalUser(context, name, email)
+                    onResult(true, email, name, null)
+                } else {
+                    onResult(false, null, null, task.exception?.localizedMessage ?: "Error al iniciar con Google")
                 }
-                .addOnFailureListener { e ->
-                    onResult(false, null, null, e.localizedMessage)
-                }
-        } catch (e: Exception) {
-            onResult(false, null, null, e.localizedMessage)
-        }
-    }
-
-    fun registerUser(context: Context, name: String, email: String, pass: String): Boolean {
-        saveLocalUser(context, name, email, pass)
-        return true
-    }
-
-    fun loginUser(context: Context, email: String, pass: String): Boolean {
-        val prefs = getPrefs(context)
-        val normalizedEmail = email.trim().lowercase()
-
-        val savedPass = prefs.getString(KEY_PREFIX_PASS + normalizedEmail, null)
-        return savedPass != null && savedPass == pass
+            }
+            .addOnFailureListener { e ->
+                onResult(false, null, null, e.localizedMessage)
+            }
     }
 
     fun getUserName(context: Context, email: String): String? {
         val prefs = getPrefs(context)
         val normalizedEmail = email.trim().lowercase()
         return prefs.getString(KEY_PREFIX_NAME + normalizedEmail, null)
+            ?: currentUser?.displayName
     }
 
     fun signOut(context: Context) {

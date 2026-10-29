@@ -12,7 +12,20 @@
           "package_name": "com.example.onfire_blog_de_notas"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "621782365839-svm3f3j55740p4dbe0og7skitf4nmt1k.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.onfire_blog_de_notas",
+            "certificate_hash": "8306bb2c5d17900bb8827e8196ceb7e1f2b69f93"
+          }
+        },
+        {
+          "client_id": "621782365839-ib90h6eqjnqnfh5bovgcctkbb3h8u31b.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyBejpVlOrTs2lF26SLHxsZ8VBV0uRdroY0"
@@ -20,7 +33,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "621782365839-ib90h6eqjnqnfh5bovgcctkbb3h8u31b.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }
