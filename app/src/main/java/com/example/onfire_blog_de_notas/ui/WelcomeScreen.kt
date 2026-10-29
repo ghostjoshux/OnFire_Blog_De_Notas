@@ -12,29 +12,19 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.layout.ContentScale
@@ -49,9 +39,7 @@ import com.example.onfire_blog_de_notas.ui.theme.OnFire_Blog_De_NotasTheme
 
 @Composable
 fun WelcomeScreen(
-    onGoogleClick: () -> Unit = {},
-    onLoginClick: () -> Unit = {},
-    onRegisterClick: () -> Unit = {},
+    onGoogleClick: () -> Unit = {}
 ) {
     Box(
         modifier = Modifier
@@ -113,24 +101,24 @@ fun WelcomeScreen(
                 )
             }
 
-            // Buttons Section
+            // Buttons Section (Only Google Sign-In)
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 16.dp),
+                    .padding(bottom = 24.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                // Button 1: Continuar con Google
+                // Button: Continuar con Google
                 Button(
                     onClick = onGoogleClick,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(56.dp)
                         .shadow(
-                            elevation = 4.dp,
+                            elevation = 6.dp,
                             shape = CircleShape,
-                            ambientColor = Color.Black.copy(alpha = 0.05f),
-                            spotColor = Color.Black.copy(alpha = 0.08f)
+                            ambientColor = Color(0xFF7E46FF).copy(alpha = 0.25f),
+                            spotColor = Color(0xFF7E46FF).copy(alpha = 0.35f)
                         ),
                     shape = CircleShape,
                     colors = ButtonDefaults.buttonColors(
@@ -154,77 +142,6 @@ fun WelcomeScreen(
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color(0xFF221F33)
-                        )
-                    }
-                }
-
-                // Button 2: Iniciar sesión
-                Button(
-                    onClick = onLoginClick,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp)
-                        .shadow(
-                            elevation = 6.dp,
-                            shape = CircleShape,
-                            ambientColor = Color(0xFF7E46FF).copy(alpha = 0.3f),
-                            spotColor = Color(0xFF7E46FF).copy(alpha = 0.4f)
-                        ),
-                    shape = CircleShape,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF8852FF),
-                        contentColor = Color.White
-                    )
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Email,
-                            contentDescription = "Email Icon",
-                            tint = Color.White,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Text(
-                            text = "Iniciar sesión",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
-                        )
-                    }
-                }
-
-                // Button 3: Crear cuenta
-                OutlinedButton(
-                    onClick = onRegisterClick,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp),
-                    shape = CircleShape,
-                    border = BorderStroke(1.5.dp, Color(0xFF9868FF)),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        containerColor = Color.White.copy(alpha = 0.7f),
-                        contentColor = Color(0xFF8852FF)
-                    )
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Person,
-                            contentDescription = "Person Icon",
-                            tint = Color(0xFF8852FF),
-                            modifier = Modifier.size(22.dp)
-                        )
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Text(
-                            text = "Crear cuenta",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFF8852FF)
                         )
                     }
                 }

@@ -87,7 +87,7 @@ object NoteManager {
     }
 
     fun getNotes(context: Context): List<NoteItem> {
-        val jsonStr = getPrefs(context).getString(KEY_NOTES, null) ?: return getInitialNotes(context)
+        val jsonStr = getPrefs(context).getString(KEY_NOTES, null) ?: return emptyList()
         val list = try {
             val array = JSONArray(jsonStr)
             val mutableList = mutableListOf<NoteItem>()
@@ -102,9 +102,9 @@ object NoteManager {
                     )
                 )
             }
-            if (mutableList.isEmpty()) getInitialNotes(context) else mutableList
+            mutableList
         } catch (e: Exception) {
-            getInitialNotes(context)
+            emptyList()
         }
 
         fetchNotesFromFirestore(context)
@@ -123,9 +123,7 @@ object NoteManager {
                             val notes = listData.mapNotNull { item ->
                                 (item as? Map<*, *>)?.let { NoteItem.fromMap(it) }
                             }
-                            if (notes.isNotEmpty()) {
-                                saveNotesLocal(context, notes)
-                            }
+                            saveNotesLocal(context, notes)
                         }
                     }
                 }
@@ -144,9 +142,7 @@ object NoteManager {
                             val contacts = listData.mapNotNull { item ->
                                 (item as? Map<*, *>)?.let { ContactItem.fromMap(it) }
                             }
-                            if (contacts.isNotEmpty()) {
-                                saveContactsLocal(context, contacts)
-                            }
+                            saveContactsLocal(context, contacts)
                         }
                     }
                 }
@@ -156,6 +152,23 @@ object NoteManager {
     fun addNote(context: Context, title: String, description: String): List<NoteItem> {
         val current = getNotes(context).toMutableList()
         current.add(0, NoteItem(title = title, description = description))
+        saveNotes(context, current)
+        return current
+    }
+
+    fun updateNote(context: Context, id: String, title: String, description: String): List<NoteItem> {
+        val current = getNotes(context).toMutableList()
+        val index = current.indexOfFirst { it.id == id }
+        if (index != -1) {
+            current[index] = current[index].copy(title = title, description = description)
+            saveNotes(context, current)
+        }
+        return current
+    }
+
+    fun deleteNote(context: Context, id: String): List<NoteItem> {
+        val current = getNotes(context).toMutableList()
+        current.removeAll { it.id == id }
         saveNotes(context, current)
         return current
     }
@@ -178,19 +191,8 @@ object NoteManager {
         syncToFirestore(notes, getContacts(context))
     }
 
-    private fun getInitialNotes(context: Context): List<NoteItem> {
-        val initial = listOf(
-            NoteItem(
-                title = "Reunión de proyecto",
-                description = "Definir las pantallas con Joshua."
-            )
-        )
-        saveNotes(context, initial)
-        return initial
-    }
-
     fun getContacts(context: Context): List<ContactItem> {
-        val jsonStr = getPrefs(context).getString(KEY_CONTACTS, null) ?: return getInitialContacts(context)
+        val jsonStr = getPrefs(context).getString(KEY_CONTACTS, null) ?: return emptyList()
         val list = try {
             val array = JSONArray(jsonStr)
             val mutableList = mutableListOf<ContactItem>()
@@ -204,9 +206,9 @@ object NoteManager {
                     )
                 )
             }
-            if (mutableList.isEmpty()) getInitialContacts(context) else mutableList
+            mutableList
         } catch (e: Exception) {
-            getInitialContacts(context)
+            emptyList()
         }
 
         fetchContactsFromFirestore(context)
@@ -216,6 +218,23 @@ object NoteManager {
     fun addContact(context: Context, name: String, phoneOrEmail: String): List<ContactItem> {
         val current = getContacts(context).toMutableList()
         current.add(0, ContactItem(name = name, phoneOrEmail = phoneOrEmail))
+        saveContacts(context, current)
+        return current
+    }
+
+    fun updateContact(context: Context, id: String, name: String, phoneOrEmail: String): List<ContactItem> {
+        val current = getContacts(context).toMutableList()
+        val index = current.indexOfFirst { it.id == id }
+        if (index != -1) {
+            current[index] = current[index].copy(name = name, phoneOrEmail = phoneOrEmail)
+            saveContacts(context, current)
+        }
+        return current
+    }
+
+    fun deleteContact(context: Context, id: String): List<ContactItem> {
+        val current = getContacts(context).toMutableList()
+        current.removeAll { it.id == id }
         saveContacts(context, current)
         return current
     }
@@ -235,15 +254,5 @@ object NoteManager {
     private fun saveContacts(context: Context, contacts: List<ContactItem>) {
         saveContactsLocal(context, contacts)
         syncToFirestore(getNotes(context), contacts)
-    }
-
-    private fun getInitialContacts(context: Context): List<ContactItem> {
-        val initial = listOf(
-            ContactItem(name = "Joshua", phoneOrEmail = "joshua@ejemplo.com"),
-            ContactItem(name = "María", phoneOrEmail = "+51 987654321"),
-            ContactItem(name = "Carlos", phoneOrEmail = "carlos@ejemplo.com")
-        )
-        saveContacts(context, initial)
-        return initial
     }
 }

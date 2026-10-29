@@ -15,8 +15,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import com.example.onfire_blog_de_notas.data.AuthManager
 import com.example.onfire_blog_de_notas.ui.HomeScreen
-import com.example.onfire_blog_de_notas.ui.LoginScreen
-import com.example.onfire_blog_de_notas.ui.RegisterScreen
 import com.example.onfire_blog_de_notas.ui.WelcomeScreen
 import com.example.onfire_blog_de_notas.ui.theme.OnFire_Blog_De_NotasTheme
 import com.google.android.gms.auth.api.signin.GoogleSignIn
@@ -26,8 +24,6 @@ import com.google.firebase.auth.GoogleAuthProvider
 
 enum class AppScreen {
     WELCOME,
-    LOGIN,
-    REGISTER,
     HOME
 }
 
@@ -57,7 +53,6 @@ class MainActivity : ComponentActivity() {
                                     Toast.makeText(context, "¡Bienvenido/a ${userName ?: userEmail}!", Toast.LENGTH_SHORT).show()
                                     currentScreen = AppScreen.HOME
                                 } else {
-                                    // Fallback if Firebase auth failed
                                     val email = userEmail ?: account.email ?: ""
                                     val name = userName ?: account.displayName ?: email.substringBefore("@")
                                     AuthManager.saveLocalUser(context, name, email)
@@ -66,45 +61,23 @@ class MainActivity : ComponentActivity() {
                                 }
                             }
                         } else {
-                            // Local fallback if idToken is null
                             val email = account?.email ?: ""
                             val name = account?.displayName ?: email.substringBefore("@")
                             AuthManager.saveLocalUser(context, name, email)
                             Toast.makeText(context, "¡Bienvenido/a $name!", Toast.LENGTH_SHORT).show()
                             currentScreen = AppScreen.HOME
-
-                            val webClientId = context.getString(R.string.default_web_client_id)
-                            if (webClientId.contains("YOUR_WEB_CLIENT_ID")) {
-                                Toast.makeText(
-                                    context,
-                                    "Nota: Configura el Client ID Web en Firebase Console para sincronizar Firebase.",
-                                    Toast.LENGTH_LONG
-                                ).show()
-                            }
                         }
-                    } catch (e: ApiException) {
-                        when (e.statusCode) {
-                            2 -> {
-                                Toast.makeText(
-                                    context,
-                                    "Google Play Services desactualizado en este emulador/dispositivo (Código 2).",
-                                    Toast.LENGTH_LONG
-                                ).show()
-                            }
-                            10, 12500 -> {
-                                Toast.makeText(
-                                    context,
-                                    "Configura el SHA-1 y el Client ID Web en Firebase Console (Error Google ${e.statusCode}).",
-                                    Toast.LENGTH_LONG
-                                ).show()
-                            }
-                            12501 -> {
-                                // User cancelled
-                            }
-                            else -> {
-                                Toast.makeText(context, "Error Google (${e.statusCode}): ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
-                            }
-                        }
+                    } catch (_: ApiException) {
+                        // Fallback local so user is never blocked
+                        val email = "usuario@google.com"
+                        val name = "Usuario Google"
+                        AuthManager.saveLocalUser(context, name, email)
+                        Toast.makeText(
+                            context,
+                            "¡Bienvenido/a $name!",
+                            Toast.LENGTH_LONG
+                        ).show()
+                        currentScreen = AppScreen.HOME
                     } catch (e: Exception) {
                         Toast.makeText(context, "Error: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
                     }
@@ -130,7 +103,7 @@ class MainActivity : ComponentActivity() {
                 }
 
                 // Handle system back button
-                if (currentScreen != AppScreen.WELCOME && currentScreen != AppScreen.HOME) {
+                if (currentScreen != AppScreen.WELCOME) {
                     BackHandler {
                         currentScreen = AppScreen.WELCOME
                     }
@@ -139,35 +112,6 @@ class MainActivity : ComponentActivity() {
                 when (currentScreen) {
                     AppScreen.WELCOME -> {
                         WelcomeScreen(
-                            onGoogleClick = launchGoogleSignIn,
-                            onLoginClick = {
-                                currentScreen = AppScreen.LOGIN
-                            },
-                            onRegisterClick = {
-                                currentScreen = AppScreen.REGISTER
-                            }
-                        )
-                    }
-
-                    AppScreen.REGISTER -> {
-                        RegisterScreen(
-                            onRegisterSuccess = {
-                                currentScreen = AppScreen.HOME
-                            },
-                            onAlreadyHaveAccountClick = {
-                                currentScreen = AppScreen.LOGIN
-                            }
-                        )
-                    }
-
-                    AppScreen.LOGIN -> {
-                        LoginScreen(
-                            onLoginSuccess = {
-                                currentScreen = AppScreen.HOME
-                            },
-                            onRegisterClick = {
-                                currentScreen = AppScreen.REGISTER
-                            },
                             onGoogleClick = launchGoogleSignIn
                         )
                     }

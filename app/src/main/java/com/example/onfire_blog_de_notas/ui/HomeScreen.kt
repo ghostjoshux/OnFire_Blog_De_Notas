@@ -13,15 +13,21 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
@@ -64,6 +70,9 @@ fun HomeScreen(
     var showCreateNoteDialog by remember { mutableStateOf(false) }
     var showAddContactDialog by remember { mutableStateOf(false) }
 
+    var editingNote by remember { mutableStateOf<NoteItem?>(null) }
+    var editingContact by remember { mutableStateOf<ContactItem?>(null) }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -76,7 +85,7 @@ fun HomeScreen(
         ) {
             when (selectedTab) {
                 0 -> {
-                    // Inicio / Dashboard Tab (Exact screenshot layout)
+                    // Inicio / Dashboard Tab
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxSize()
@@ -86,9 +95,8 @@ fun HomeScreen(
                         item {
                             Spacer(modifier = Modifier.height(24.dp))
 
-                            // Breadcrumb Header: NEXO / ACCESO
                             Text(
-                                text = "NEXO / ACCESO",
+                                text = "Bienvenido",
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color(0xFF8D7BB0),
@@ -97,7 +105,6 @@ fun HomeScreen(
 
                             Spacer(modifier = Modifier.height(6.dp))
 
-                            // Main Title: Hola, Fio
                             Text(
                                 text = "Hola, $displayName",
                                 fontSize = 32.sp,
@@ -107,7 +114,6 @@ fun HomeScreen(
 
                             Spacer(modifier = Modifier.height(16.dp))
 
-                            // Summary Card
                             Card(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -142,7 +148,6 @@ fun HomeScreen(
 
                             Spacer(modifier = Modifier.height(16.dp))
 
-                            // Button 1: + Crear nota
                             Button(
                                 onClick = { showCreateNoteDialog = true },
                                 modifier = Modifier
@@ -170,7 +175,6 @@ fun HomeScreen(
 
                             Spacer(modifier = Modifier.height(12.dp))
 
-                            // Button 2: + Agregar contacto
                             Button(
                                 onClick = { showAddContactDialog = true },
                                 modifier = Modifier
@@ -192,7 +196,6 @@ fun HomeScreen(
 
                             Spacer(modifier = Modifier.height(24.dp))
 
-                            // Section Title: Notas recientes
                             Text(
                                 text = "Notas recientes",
                                 fontSize = 20.sp,
@@ -203,7 +206,6 @@ fun HomeScreen(
                             Spacer(modifier = Modifier.height(8.dp))
                         }
 
-                        // List of Recent Notes
                         if (notesList.isEmpty()) {
                             item {
                                 Text(
@@ -215,7 +217,14 @@ fun HomeScreen(
                             }
                         } else {
                             items(notesList) { note ->
-                                NoteCardItem(note = note)
+                                NoteCardItem(
+                                    note = note,
+                                    onEdit = { editingNote = note },
+                                    onDelete = {
+                                        notesList = NoteManager.deleteNote(context, note.id)
+                                        Toast.makeText(context, "Nota eliminada", Toast.LENGTH_SHORT).show()
+                                    }
+                                )
                             }
                         }
 
@@ -258,7 +267,14 @@ fun HomeScreen(
                             verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             items(notesList) { note ->
-                                NoteCardItem(note = note)
+                                NoteCardItem(
+                                    note = note,
+                                    onEdit = { editingNote = note },
+                                    onDelete = {
+                                        notesList = NoteManager.deleteNote(context, note.id)
+                                        Toast.makeText(context, "Nota eliminada", Toast.LENGTH_SHORT).show()
+                                    }
+                                )
                             }
                         }
                     }
@@ -297,7 +313,14 @@ fun HomeScreen(
                             verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             items(contactsList) { contact ->
-                                ContactCardItem(contact = contact)
+                                ContactCardItem(
+                                    contact = contact,
+                                    onEdit = { editingContact = contact },
+                                    onDelete = {
+                                        contactsList = NoteManager.deleteContact(context, contact.id)
+                                        Toast.makeText(context, "Contacto eliminado", Toast.LENGTH_SHORT).show()
+                                    }
+                                )
                             }
                         }
                     }
@@ -396,7 +419,7 @@ fun HomeScreen(
             }
         }
 
-        // Floating Bottom Navigation Bar (Matching exact screenshot styling)
+        // Floating Bottom Navigation Bar
         Box(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
@@ -441,7 +464,7 @@ fun HomeScreen(
             }
         }
 
-        // Dialog 1: Dialog for creating a new Note
+        // Dialog: Create Note
         if (showCreateNoteDialog) {
             var titleInput by remember { mutableStateOf("") }
             var descInput by remember { mutableStateOf("") }
@@ -473,7 +496,7 @@ fun HomeScreen(
                             value = descInput,
                             onValueChange = { descInput = it },
                             label = { Text("Descripción") },
-                            placeholder = { Text("Ej. Definir las pantallas con Joshua.") },
+                            placeholder = { Text("Ej. Ir al supermercado") },
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = Color(0xFF634CAE),
                                 focusedLabelColor = Color(0xFF634CAE)
@@ -508,7 +531,72 @@ fun HomeScreen(
             )
         }
 
-        // Dialog 2: Dialog for adding a new Contact
+        // Dialog: Edit Note
+        editingNote?.let { note ->
+            var titleInput by remember { mutableStateOf(note.title) }
+            var descInput by remember { mutableStateOf(note.description) }
+
+            AlertDialog(
+                onDismissRequest = { editingNote = null },
+                title = {
+                    Text(
+                        text = "Editar nota",
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF1B162C)
+                    )
+                },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        OutlinedTextField(
+                            value = titleInput,
+                            onValueChange = { titleInput = it },
+                            label = { Text("Título") },
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = Color(0xFF634CAE),
+                                focusedLabelColor = Color(0xFF634CAE)
+                            ),
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(
+                            value = descInput,
+                            onValueChange = { descInput = it },
+                            label = { Text("Descripción") },
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = Color(0xFF634CAE),
+                                focusedLabelColor = Color(0xFF634CAE)
+                            ),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            if (titleInput.isNotBlank()) {
+                                notesList = NoteManager.updateNote(context, note.id, titleInput.trim(), descInput.trim())
+                                Toast.makeText(context, "Nota actualizada", Toast.LENGTH_SHORT).show()
+                                editingNote = null
+                            } else {
+                                Toast.makeText(context, "El título no puede estar vacío", Toast.LENGTH_SHORT).show()
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF634CAE))
+                    ) {
+                        Text("Actualizar", color = Color.White)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { editingNote = null }) {
+                        Text("Cancelar", color = Color(0xFF7A758E))
+                    }
+                },
+                containerColor = Color.White,
+                shape = RoundedCornerShape(24.dp)
+            )
+        }
+
+        // Dialog: Add Contact
         if (showAddContactDialog) {
             var nameInput by remember { mutableStateOf("") }
             var detailInput by remember { mutableStateOf("") }
@@ -528,7 +616,7 @@ fun HomeScreen(
                             value = nameInput,
                             onValueChange = { nameInput = it },
                             label = { Text("Nombre") },
-                            placeholder = { Text("Ej. Joshua") },
+                            placeholder = { Text("Ej. Jorge") },
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = Color(0xFF634CAE),
                                 focusedLabelColor = Color(0xFF634CAE)
@@ -540,7 +628,7 @@ fun HomeScreen(
                             value = detailInput,
                             onValueChange = { detailInput = it },
                             label = { Text("Teléfono / Correo") },
-                            placeholder = { Text("Ej. joshua@ejemplo.com") },
+                            placeholder = { Text("Ej. ejemplo@gmail.com") },
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = Color(0xFF634CAE),
                                 focusedLabelColor = Color(0xFF634CAE)
@@ -575,54 +663,81 @@ fun HomeScreen(
                 shape = RoundedCornerShape(24.dp)
             )
         }
-    }
-}
 
-@Composable
-fun NoteCardItem(note: NoteItem) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .shadow(
-                elevation = 1.5.dp,
-                shape = RoundedCornerShape(20.dp),
-                ambientColor = Color.Black.copy(alpha = 0.02f),
-                spotColor = Color.Black.copy(alpha = 0.04f)
-            ),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 22.dp, vertical = 18.dp)
-        ) {
-            Text(
-                text = note.title,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color(0xFF1B162C)
+        // Dialog: Edit Contact
+        editingContact?.let { contact ->
+            var nameInput by remember { mutableStateOf(contact.name) }
+            var detailInput by remember { mutableStateOf(contact.phoneOrEmail) }
+
+            AlertDialog(
+                onDismissRequest = { editingContact = null },
+                title = {
+                    Text(
+                        text = "Editar contacto",
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF1B162C)
+                    )
+                },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        OutlinedTextField(
+                            value = nameInput,
+                            onValueChange = { nameInput = it },
+                            label = { Text("Nombre") },
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = Color(0xFF634CAE),
+                                focusedLabelColor = Color(0xFF634CAE)
+                            ),
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(
+                            value = detailInput,
+                            onValueChange = { detailInput = it },
+                            label = { Text("Teléfono") },
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = Color(0xFF634CAE),
+                                focusedLabelColor = Color(0xFF634CAE)
+                            ),
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            if (nameInput.isNotBlank()) {
+                                contactsList = NoteManager.updateContact(context, contact.id, nameInput.trim(), detailInput.trim())
+                                Toast.makeText(context, "Contacto actualizado", Toast.LENGTH_SHORT).show()
+                                editingContact = null
+                            } else {
+                                Toast.makeText(context, "El nombre no puede estar vacío", Toast.LENGTH_SHORT).show()
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF634CAE))
+                    ) {
+                        Text("Actualizar", color = Color.White)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { editingContact = null }) {
+                        Text("Cancelar", color = Color(0xFF7A758E))
+                    }
+                },
+                containerColor = Color.White,
+                shape = RoundedCornerShape(24.dp)
             )
-            if (note.description.isNotBlank()) {
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = note.description,
-                    fontSize = 14.sp,
-                    color = Color(0xFF7A758E)
-                )
-            }
         }
     }
 }
 
-@Preview(showBackground = true, showSystemUi = true)
 @Composable
-fun HomeScreenPreview() {
-    HomeScreen()
-}
-
-@Composable
-fun ContactCardItem(contact: ContactItem) {
+fun NoteCardItem(
+    note: NoteItem,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit
+) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -638,39 +753,134 @@ fun ContactCardItem(contact: ContactItem) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 22.dp, vertical = 18.dp),
+                .padding(horizontal = 22.dp, vertical = 16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Box(
-                modifier = Modifier
-                    .size(44.dp)
-                    .background(Color(0xFFECE4FB), shape = CircleShape),
-                contentAlignment = Alignment.Center
+            Column(
+                modifier = Modifier.weight(1f)
             ) {
                 Text(
-                    text = contact.name.take(1).uppercase(),
+                    text = note.title,
                     fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFF634CAE)
-                )
-            }
-            Spacer(modifier = Modifier.padding(start = 14.dp))
-            Column {
-                Text(
-                    text = contact.name,
-                    fontSize = 17.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color(0xFF1B162C)
                 )
-                if (contact.phoneOrEmail.isNotBlank()) {
-                    Spacer(modifier = Modifier.height(2.dp))
+                if (note.description.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = contact.phoneOrEmail,
-                        fontSize = 13.sp,
+                        text = note.description,
+                        fontSize = 14.sp,
                         color = Color(0xFF7A758E)
+                    )
+                }
+            }
+            Row {
+                IconButton(onClick = onEdit) {
+                    Icon(
+                        imageVector = Icons.Default.Edit,
+                        contentDescription = "Editar nota",
+                        tint = Color(0xFF634CAE),
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+                IconButton(onClick = onDelete) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "Eliminar nota",
+                        tint = Color(0xFFE53935),
+                        modifier = Modifier.size(20.dp)
                     )
                 }
             }
         }
     }
+}
+
+@Composable
+fun ContactCardItem(
+    contact: ContactItem,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(
+                elevation = 1.5.dp,
+                shape = RoundedCornerShape(20.dp),
+                ambientColor = Color.Black.copy(alpha = 0.02f),
+                spotColor = Color.Black.copy(alpha = 0.04f)
+            ),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 22.dp, vertical = 16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.weight(1f)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .background(Color(0xFFECE4FB), shape = CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = contact.name.take(1).uppercase(),
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF634CAE)
+                    )
+                }
+                Spacer(modifier = Modifier.width(14.dp))
+                Column {
+                    Text(
+                        text = contact.name,
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF1B162C)
+                    )
+                    if (contact.phoneOrEmail.isNotBlank()) {
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = contact.phoneOrEmail,
+                            fontSize = 13.sp,
+                            color = Color(0xFF7A758E)
+                        )
+                    }
+                }
+            }
+            Row {
+                IconButton(onClick = onEdit) {
+                    Icon(
+                        imageVector = Icons.Default.Edit,
+                        contentDescription = "Editar contacto",
+                        tint = Color(0xFF634CAE),
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+                IconButton(onClick = onDelete) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "Eliminar contacto",
+                        tint = Color(0xFFE53935),
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Preview(showBackground = true, showSystemUi = true)
+@Composable
+fun HomeScreenPreview() {
+    HomeScreen()
 }
