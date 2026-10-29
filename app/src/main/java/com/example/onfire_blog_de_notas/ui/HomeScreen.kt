@@ -18,6 +18,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
@@ -26,6 +27,11 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
@@ -44,6 +50,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -52,6 +59,43 @@ import com.example.onfire_blog_de_notas.data.ContactItem
 import com.example.onfire_blog_de_notas.data.NoteItem
 import com.example.onfire_blog_de_notas.data.NoteManager
 
+data class CountryCode(val country: String, val code: String)
+
+val countryCodes = listOf(
+    CountryCode("Perú", "+51"),
+    CountryCode("México", "+52"),
+    CountryCode("Argentina", "+54"),
+    CountryCode("Colombia", "+57"),
+    CountryCode("España", "+34"),
+    CountryCode("EE. UU.", "+1"),
+    CountryCode("Chile", "+56"),
+    CountryCode("Venezuela", "+58"),
+    CountryCode("Ecuador", "+593"),
+    CountryCode("Bolivia", "+591"),
+    CountryCode("Brasil", "+55"),
+    CountryCode("Costa Rica", "+506"),
+    CountryCode("Cuba", "+53"),
+    CountryCode("El Salvador", "+503"),
+    CountryCode("Guatemala", "+502"),
+    CountryCode("Honduras", "+504"),
+    CountryCode("Nicaragua", "+505"),
+    CountryCode("Panamá", "+507"),
+    CountryCode("Paraguay", "+595"),
+    CountryCode("Uruguay", "+598")
+)
+
+fun parsePhone(phoneOrEmail: String): Pair<String, String> {
+    val trimmed = phoneOrEmail.trim()
+    for (cc in countryCodes) {
+        if (trimmed.startsWith(cc.code)) {
+            val numberPart = trimmed.removePrefix(cc.code).trim().filter { it.isDigit() }
+            return Pair(cc.code, numberPart)
+        }
+    }
+    return Pair("+51", trimmed.filter { it.isDigit() })
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     onSignOutClick: () -> Unit = {}
@@ -599,7 +643,9 @@ fun HomeScreen(
         // Dialog: Add Contact
         if (showAddContactDialog) {
             var nameInput by remember { mutableStateOf("") }
-            var detailInput by remember { mutableStateOf("") }
+            var selectedCode by remember { mutableStateOf("+51") }
+            var phoneInput by remember { mutableStateOf("") }
+            var expandedCode by remember { mutableStateOf(false) }
 
             AlertDialog(
                 onDismissRequest = { showAddContactDialog = false },
@@ -624,25 +670,71 @@ fun HomeScreen(
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth()
                         )
-                        OutlinedTextField(
-                            value = detailInput,
-                            onValueChange = { detailInput = it },
-                            label = { Text("Teléfono / Correo") },
-                            placeholder = { Text("Ej. ejemplo@gmail.com") },
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = Color(0xFF634CAE),
-                                focusedLabelColor = Color(0xFF634CAE)
-                            ),
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth()
-                        )
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            ExposedDropdownMenuBox(
+                                expanded = expandedCode,
+                                onExpandedChange = { expandedCode = !expandedCode },
+                                modifier = Modifier.width(120.dp)
+                            ) {
+                                OutlinedTextField(
+                                    value = selectedCode,
+                                    onValueChange = {},
+                                    readOnly = true,
+                                    label = { Text("Código") },
+                                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedCode) },
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        focusedBorderColor = Color(0xFF634CAE),
+                                        focusedLabelColor = Color(0xFF634CAE)
+                                    ),
+                                    modifier = Modifier.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
+                                )
+                                ExposedDropdownMenu(
+                                    expanded = expandedCode,
+                                    onDismissRequest = { expandedCode = false }
+                                ) {
+                                    countryCodes.forEach { cc ->
+                                        DropdownMenuItem(
+                                            text = { Text("${cc.code} (${cc.country})") },
+                                            onClick = {
+                                                selectedCode = cc.code
+                                                expandedCode = false
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+
+                            OutlinedTextField(
+                                value = phoneInput,
+                                onValueChange = { input ->
+                                    if (input.all { it.isDigit() }) {
+                                        phoneInput = input
+                                    }
+                                },
+                                label = { Text("Teléfono") },
+                                placeholder = { Text("987654321") },
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = Color(0xFF634CAE),
+                                    focusedLabelColor = Color(0xFF634CAE)
+                                ),
+                                singleLine = true,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
                     }
                 },
                 confirmButton = {
                     Button(
                         onClick = {
                             if (nameInput.isNotBlank()) {
-                                contactsList = NoteManager.addContact(context, nameInput.trim(), detailInput.trim())
+                                val fullPhone = if (phoneInput.isNotBlank()) "$selectedCode $phoneInput" else ""
+                                contactsList = NoteManager.addContact(context, nameInput.trim(), fullPhone)
                                 Toast.makeText(context, "Contacto agregado con éxito", Toast.LENGTH_SHORT).show()
                                 showAddContactDialog = false
                             } else {
@@ -667,7 +759,10 @@ fun HomeScreen(
         // Dialog: Edit Contact
         editingContact?.let { contact ->
             var nameInput by remember { mutableStateOf(contact.name) }
-            var detailInput by remember { mutableStateOf(contact.phoneOrEmail) }
+            val parsed = parsePhone(contact.phoneOrEmail)
+            var selectedCode by remember { mutableStateOf(parsed.first) }
+            var phoneInput by remember { mutableStateOf(parsed.second) }
+            var expandedCode by remember { mutableStateOf(false) }
 
             AlertDialog(
                 onDismissRequest = { editingContact = null },
@@ -691,24 +786,71 @@ fun HomeScreen(
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth()
                         )
-                        OutlinedTextField(
-                            value = detailInput,
-                            onValueChange = { detailInput = it },
-                            label = { Text("Teléfono") },
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = Color(0xFF634CAE),
-                                focusedLabelColor = Color(0xFF634CAE)
-                            ),
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth()
-                        )
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            ExposedDropdownMenuBox(
+                                expanded = expandedCode,
+                                onExpandedChange = { expandedCode = !expandedCode },
+                                modifier = Modifier.width(120.dp)
+                            ) {
+                                OutlinedTextField(
+                                    value = selectedCode,
+                                    onValueChange = {},
+                                    readOnly = true,
+                                    label = { Text("Código") },
+                                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedCode) },
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        focusedBorderColor = Color(0xFF634CAE),
+                                        focusedLabelColor = Color(0xFF634CAE)
+                                    ),
+                                    modifier = Modifier.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
+                                )
+                                ExposedDropdownMenu(
+                                    expanded = expandedCode,
+                                    onDismissRequest = { expandedCode = false }
+                                ) {
+                                    countryCodes.forEach { cc ->
+                                        DropdownMenuItem(
+                                            text = { Text("${cc.code} (${cc.country})") },
+                                            onClick = {
+                                                selectedCode = cc.code
+                                                expandedCode = false
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+
+                            OutlinedTextField(
+                                value = phoneInput,
+                                onValueChange = { input ->
+                                    if (input.all { it.isDigit() }) {
+                                        phoneInput = input
+                                    }
+                                },
+                                label = { Text("Teléfono") },
+                                placeholder = { Text("987654321") },
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = Color(0xFF634CAE),
+                                    focusedLabelColor = Color(0xFF634CAE)
+                                ),
+                                singleLine = true,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
                     }
                 },
                 confirmButton = {
                     Button(
                         onClick = {
                             if (nameInput.isNotBlank()) {
-                                contactsList = NoteManager.updateContact(context, contact.id, nameInput.trim(), detailInput.trim())
+                                val fullPhone = if (phoneInput.isNotBlank()) "$selectedCode $phoneInput" else ""
+                                contactsList = NoteManager.updateContact(context, contact.id, nameInput.trim(), fullPhone)
                                 Toast.makeText(context, "Contacto actualizado", Toast.LENGTH_SHORT).show()
                                 editingContact = null
                             } else {
