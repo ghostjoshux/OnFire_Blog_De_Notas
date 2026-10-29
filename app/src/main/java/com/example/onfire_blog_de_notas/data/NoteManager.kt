@@ -11,22 +11,29 @@ data class NoteItem(
     val id: String = java.util.UUID.randomUUID().toString(),
     val title: String,
     val description: String,
-    val timestamp: Long = System.currentTimeMillis()
+    val timestamp: Long = System.currentTimeMillis(),
+    val dueDate: String? = null,
+    val isImportant: Boolean = false
 ) {
     fun toMap(): Map<String, Any> = mapOf(
         "id" to id,
         "title" to title,
         "description" to description,
-        "timestamp" to timestamp
+        "timestamp" to timestamp,
+        "dueDate" to (dueDate ?: ""),
+        "isImportant" to isImportant
     )
 
     companion object {
         fun fromMap(map: Map<*, *>): NoteItem {
+            val dDate = map["dueDate"] as? String
             return NoteItem(
                 id = map["id"] as? String ?: java.util.UUID.randomUUID().toString(),
                 title = map["title"] as? String ?: "",
                 description = map["description"] as? String ?: "",
-                timestamp = (map["timestamp"] as? Number)?.toLong() ?: System.currentTimeMillis()
+                timestamp = (map["timestamp"] as? Number)?.toLong() ?: System.currentTimeMillis(),
+                dueDate = if (dDate.isNullOrBlank()) null else dDate,
+                isImportant = map["isImportant"] as? Boolean ?: false
             )
         }
     }
@@ -93,12 +100,15 @@ object NoteManager {
             val mutableList = mutableListOf<NoteItem>()
             for (i in 0 until array.length()) {
                 val obj = array.getJSONObject(i)
+                val dDate = if (obj.has("dueDate") && !obj.isNull("dueDate")) obj.getString("dueDate") else null
                 mutableList.add(
                     NoteItem(
                         id = obj.optString("id"),
                         title = obj.optString("title"),
                         description = obj.optString("description"),
-                        timestamp = obj.optLong("timestamp")
+                        timestamp = obj.optLong("timestamp"),
+                        dueDate = if (dDate.isNullOrBlank()) null else dDate,
+                        isImportant = obj.optBoolean("isImportant", false)
                     )
                 )
             }
@@ -149,18 +159,34 @@ object NoteManager {
         } catch (_: Throwable) {}
     }
 
-    fun addNote(context: Context, title: String, description: String): List<NoteItem> {
+    fun addNote(context: Context, title: String, description: String, dueDate: String?, isImportant: Boolean): List<NoteItem> {
         val current = getNotes(context).toMutableList()
-        current.add(0, NoteItem(title = title, description = description))
+        current.add(0, NoteItem(title = title, description = description, dueDate = dueDate, isImportant = isImportant))
         saveNotes(context, current)
         return current
     }
 
-    fun updateNote(context: Context, id: String, title: String, description: String): List<NoteItem> {
+    fun updateNote(context: Context, id: String, title: String, description: String, dueDate: String?, isImportant: Boolean): List<NoteItem> {
         val current = getNotes(context).toMutableList()
         val index = current.indexOfFirst { it.id == id }
         if (index != -1) {
-            current[index] = current[index].copy(title = title, description = description)
+            current[index] = current[index].copy(
+                title = title,
+                description = description,
+                dueDate = dueDate,
+                isImportant = isImportant
+            )
+            saveNotes(context, current)
+        }
+        return current
+    }
+
+    fun toggleImportant(context: Context, id: String): List<NoteItem> {
+        val current = getNotes(context).toMutableList()
+        val index = current.indexOfFirst { it.id == id }
+        if (index != -1) {
+            val item = current[index]
+            current[index] = item.copy(isImportant = !item.isImportant)
             saveNotes(context, current)
         }
         return current
@@ -181,6 +207,8 @@ object NoteManager {
             obj.put("title", note.title)
             obj.put("description", note.description)
             obj.put("timestamp", note.timestamp)
+            obj.put("dueDate", note.dueDate ?: "")
+            obj.put("isImportant", note.isImportant)
             array.put(obj)
         }
         getPrefs(context).edit().putString(KEY_NOTES, array.toString()).apply()

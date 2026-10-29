@@ -25,6 +25,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -65,26 +67,64 @@ import com.example.onfire_blog_de_notas.data.NoteManager
 data class CountryCode(val country: String, val code: String)
 
 val countryCodes = listOf(
-    CountryCode("Perú", "+51"),
-    CountryCode("México", "+52"),
-    CountryCode("Argentina", "+54"),
-    CountryCode("Colombia", "+57"),
-    CountryCode("España", "+34"),
-    CountryCode("EE. UU.", "+1"),
-    CountryCode("Chile", "+56"),
-    CountryCode("Venezuela", "+58"),
-    CountryCode("Ecuador", "+593"),
-    CountryCode("Bolivia", "+591"),
-    CountryCode("Brasil", "+55"),
-    CountryCode("Costa Rica", "+506"),
-    CountryCode("Cuba", "+53"),
-    CountryCode("El Salvador", "+503"),
-    CountryCode("Guatemala", "+502"),
-    CountryCode("Honduras", "+504"),
-    CountryCode("Nicaragua", "+505"),
-    CountryCode("Panamá", "+507"),
-    CountryCode("Paraguay", "+595"),
-    CountryCode("Uruguay", "+598")
+    CountryCode("🇩🇪 Alemania", "+49"),
+    CountryCode("🇦🇷 Argentina", "+54"),
+    CountryCode("🇦🇺 Australia", "+61"),
+    CountryCode("🇦🇹 Austria", "+43"),
+    CountryCode("🇧🇪 Bélgica", "+32"),
+    CountryCode("🇧🇴 Bolivia", "+591"),
+    CountryCode("🇧🇷 Brasil", "+55"),
+    CountryCode("🇨🇦 Canadá", "+1"),
+    CountryCode("🇨🇱 Chile", "+56"),
+    CountryCode("🇨🇳 China", "+86"),
+    CountryCode("🇨🇴 Colombia", "+57"),
+    CountryCode("🇰🇷 Corea del Sur", "+82"),
+    CountryCode("🇨🇷 Costa Rica", "+506"),
+    CountryCode("🇨🇺 Cuba", "+53"),
+    CountryCode("🇩🇰 Dinamarca", "+45"),
+    CountryCode("🇪🇨 Ecuador", "+593"),
+    CountryCode("🇪🇬 Egipto", "+20"),
+    CountryCode("🇸🇻 El Salvador", "+503"),
+    CountryCode("🇦🇪 Emiratos Árabes Unidos", "+971"),
+    CountryCode("🇪🇸 España", "+34"),
+    CountryCode("🇺🇸 Estados Unidos", "+1"),
+    CountryCode("🇵🇭 Filipinas", "+63"),
+    CountryCode("🇫🇮 Finlandia", "+358"),
+    CountryCode("🇫🇷 Francia", "+33"),
+    CountryCode("🇬🇷 Grecia", "+30"),
+    CountryCode("🇬🇹 Guatemala", "+502"),
+    CountryCode("🇭🇹 Haití", "+509"),
+    CountryCode("🇭🇳 Honduras", "+504"),
+    CountryCode("🇮🇳 India", "+91"),
+    CountryCode("🇮🇩 Indonesia", "+62"),
+    CountryCode("🇮🇪 Irlanda", "+353"),
+    CountryCode("🇮🇹 Italia", "+39"),
+    CountryCode("🇯🇲 Jamaica", "+1-876"),
+    CountryCode("🇯🇵 Japón", "+81"),
+    CountryCode("🇲🇦 Marruecos", "+212"),
+    CountryCode("🇲🇽 México", "+52"),
+    CountryCode("🇳🇮 Nicaragua", "+505"),
+    CountryCode("🇳🇴 Noruega", "+47"),
+    CountryCode("🇳🇿 Nueva Zelanda", "+64"),
+    CountryCode("🇳🇱 Países Bajos", "+31"),
+    CountryCode("🇵🇦 Panamá", "+507"),
+    CountryCode("🇵🇾 Paraguay", "+595"),
+    CountryCode("🇵🇪 Perú", "+51"),
+    CountryCode("🇵🇱 Polonia", "+48"),
+    CountryCode("🇵🇹 Portugal", "+351"),
+    CountryCode("🇬🇧 Reino Unido", "+44"),
+    CountryCode("🇩🇴 República Dominicana", "+1-809"),
+    CountryCode("🇷🇺 Rusia", "+7"),
+    CountryCode("🇸🇬 Singapur", "+65"),
+    CountryCode("🇿🇦 Sudáfrica", "+27"),
+    CountryCode("🇸🇪 Suecia", "+46"),
+    CountryCode("🇨🇭 Suiza", "+41"),
+    CountryCode("🇹🇭 Tailandia", "+66"),
+    CountryCode("🇹🇷 Turquía", "+90"),
+    CountryCode("🇺🇦 Ucrania", "+380"),
+    CountryCode("🇺🇾 Uruguay", "+598"),
+    CountryCode("🇻🇪 Venezuela", "+58"),
+    CountryCode("🇻🇳 Vietnam", "+84")
 )
 
 fun parsePhone(phoneOrEmail: String): Pair<String, String> {
@@ -280,6 +320,9 @@ fun HomeScreen(
                                     textColor = textColor,
                                     secondaryTextColor = secondaryTextColor,
                                     accentColor = accentColor,
+                                    onToggleImportant = {
+                                        notesList = NoteManager.toggleImportant(context, note.id)
+                                    },
                                     onEdit = { editingNote = note },
                                     onDelete = {
                                         notesList = NoteManager.deleteNote(context, note.id)
@@ -334,6 +377,9 @@ fun HomeScreen(
                                     textColor = textColor,
                                     secondaryTextColor = secondaryTextColor,
                                     accentColor = accentColor,
+                                    onToggleImportant = {
+                                        notesList = NoteManager.toggleImportant(context, note.id)
+                                    },
                                     onEdit = { editingNote = note },
                                     onDelete = {
                                         notesList = NoteManager.deleteNote(context, note.id)
@@ -539,6 +585,8 @@ fun HomeScreen(
         if (showCreateNoteDialog) {
             var titleInput by remember { mutableStateOf("") }
             var descInput by remember { mutableStateOf("") }
+            var dueDateInput by remember { mutableStateOf<String?>(null) }
+            var isImportantInput by remember { mutableStateOf(false) }
 
             AlertDialog(
                 onDismissRequest = { showCreateNoteDialog = false },
@@ -563,24 +611,83 @@ fun HomeScreen(
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth()
                         )
+
                         OutlinedTextField(
                             value = descInput,
                             onValueChange = { descInput = it },
                             label = { Text("Descripción") },
-                            placeholder = { Text("Ej. Ir al supermercado") },
+                            placeholder = { Text("Escribe tu nota aquí...") },
+                            minLines = 4,
+                            maxLines = 8,
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = accentColor,
                                 focusedLabelColor = accentColor
                             ),
                             modifier = Modifier.fillMaxWidth()
                         )
+
+                        // Due Date Selector (Optional)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            TextButton(
+                                onClick = {
+                                    val calendar = java.util.Calendar.getInstance()
+                                    android.app.DatePickerDialog(
+                                        context,
+                                        { _, y, m, d ->
+                                            dueDateInput = String.format(java.util.Locale.getDefault(), "%02d/%02d/%d", d, m + 1, y)
+                                        },
+                                        calendar.get(java.util.Calendar.YEAR),
+                                        calendar.get(java.util.Calendar.MONTH),
+                                        calendar.get(java.util.Calendar.DAY_OF_MONTH)
+                                    ).show()
+                                }
+                            ) {
+                                Text(
+                                    text = if (dueDateInput != null) "📅 Vence: $dueDateInput" else "📅 Agregar fecha (opcional)",
+                                    color = accentColor,
+                                    fontWeight = FontWeight.Medium,
+                                    fontSize = 14.sp
+                                )
+                            }
+                            if (dueDateInput != null) {
+                                TextButton(onClick = { dueDateInput = null }) {
+                                    Text("Quitar", color = Color(0xFFE53935), fontSize = 13.sp)
+                                }
+                            }
+                        }
+
+                        // Important Star Toggle
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { isImportantInput = !isImportantInput }
+                                .padding(vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                imageVector = if (isImportantInput) Icons.Default.Star else Icons.Outlined.Star,
+                                contentDescription = "Importante",
+                                tint = if (isImportantInput) Color(0xFFFFC107) else secondaryTextColor
+                            )
+                            Text(
+                                text = "Marcar como importante",
+                                color = textColor,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
                     }
                 },
                 confirmButton = {
                     Button(
                         onClick = {
                             if (titleInput.isNotBlank()) {
-                                notesList = NoteManager.addNote(context, titleInput.trim(), descInput.trim())
+                                notesList = NoteManager.addNote(context, titleInput.trim(), descInput.trim(), dueDateInput, isImportantInput)
                                 Toast.makeText(context, "Nota creada con éxito", Toast.LENGTH_SHORT).show()
                                 showCreateNoteDialog = false
                             } else {
@@ -606,6 +713,8 @@ fun HomeScreen(
         editingNote?.let { note ->
             var titleInput by remember { mutableStateOf(note.title) }
             var descInput by remember { mutableStateOf(note.description) }
+            var dueDateInput by remember { mutableStateOf(note.dueDate) }
+            var isImportantInput by remember { mutableStateOf(note.isImportant) }
 
             AlertDialog(
                 onDismissRequest = { editingNote = null },
@@ -629,23 +738,82 @@ fun HomeScreen(
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth()
                         )
+
                         OutlinedTextField(
                             value = descInput,
                             onValueChange = { descInput = it },
                             label = { Text("Descripción") },
+                            minLines = 4,
+                            maxLines = 8,
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = accentColor,
                                 focusedLabelColor = accentColor
                             ),
                             modifier = Modifier.fillMaxWidth()
                         )
+
+                        // Due Date Selector (Optional)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            TextButton(
+                                onClick = {
+                                    val calendar = java.util.Calendar.getInstance()
+                                    android.app.DatePickerDialog(
+                                        context,
+                                        { _, y, m, d ->
+                                            dueDateInput = String.format(java.util.Locale.getDefault(), "%02d/%02d/%d", d, m + 1, y)
+                                        },
+                                        calendar.get(java.util.Calendar.YEAR),
+                                        calendar.get(java.util.Calendar.MONTH),
+                                        calendar.get(java.util.Calendar.DAY_OF_MONTH)
+                                    ).show()
+                                }
+                            ) {
+                                Text(
+                                    text = if (dueDateInput != null) "📅 Vence: $dueDateInput" else "📅 Agregar fecha (opcional)",
+                                    color = accentColor,
+                                    fontWeight = FontWeight.Medium,
+                                    fontSize = 14.sp
+                                )
+                            }
+                            if (dueDateInput != null) {
+                                TextButton(onClick = { dueDateInput = null }) {
+                                    Text("Quitar", color = Color(0xFFE53935), fontSize = 13.sp)
+                                }
+                            }
+                        }
+
+                        // Important Star Toggle
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { isImportantInput = !isImportantInput }
+                                .padding(vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                imageVector = if (isImportantInput) Icons.Default.Star else Icons.Outlined.Star,
+                                contentDescription = "Importante",
+                                tint = if (isImportantInput) Color(0xFFFFC107) else secondaryTextColor
+                            )
+                            Text(
+                                text = "Marcar como importante",
+                                color = textColor,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
                     }
                 },
                 confirmButton = {
                     Button(
                         onClick = {
                             if (titleInput.isNotBlank()) {
-                                notesList = NoteManager.updateNote(context, note.id, titleInput.trim(), descInput.trim())
+                                notesList = NoteManager.updateNote(context, note.id, titleInput.trim(), descInput.trim(), dueDateInput, isImportantInput)
                                 Toast.makeText(context, "Nota actualizada", Toast.LENGTH_SHORT).show()
                                 editingNote = null
                             } else {
@@ -899,7 +1067,7 @@ fun HomeScreen(
             )
         }
 
-        // Dialog: Contact Actions (Call, WhatsApp - removed system contacts save)
+        // Dialog: Contact Actions (Call, WhatsApp)
         selectedContactAction?.let { contact ->
             AlertDialog(
                 onDismissRequest = { selectedContactAction = null },
@@ -933,7 +1101,9 @@ fun HomeScreen(
                                     Toast.makeText(context, "No se pudo abrir el marcador", Toast.LENGTH_SHORT).show()
                                 }
                             },
-                            modifier = Modifier.fillMaxWidth().height(48.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(48.dp),
                             shape = RoundedCornerShape(14.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = accentColor)
                         ) {
@@ -953,7 +1123,9 @@ fun HomeScreen(
                                     Toast.makeText(context, "WhatsApp no está instalado o no es válido", Toast.LENGTH_SHORT).show()
                                 }
                             },
-                            modifier = Modifier.fillMaxWidth().height(48.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(48.dp),
                             shape = RoundedCornerShape(14.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF25D366), contentColor = Color.White)
                         ) {
@@ -981,6 +1153,7 @@ fun NoteCardItem(
     textColor: Color,
     secondaryTextColor: Color,
     accentColor: Color,
+    onToggleImportant: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
@@ -996,46 +1169,80 @@ fun NoteCardItem(
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = cardColor)
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 22.dp, vertical = 16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+                .padding(horizontal = 22.dp, vertical = 16.dp)
         ) {
-            Column(
-                modifier = Modifier.weight(1f)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = note.title,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = textColor
-                )
-                if (note.description.isNotBlank()) {
-                    Spacer(modifier = Modifier.height(4.dp))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    IconButton(onClick = onToggleImportant, modifier = Modifier.size(32.dp)) {
+                        Icon(
+                            imageVector = if (note.isImportant) Icons.Default.Star else Icons.Outlined.Star,
+                            contentDescription = "Importante",
+                            tint = if (note.isImportant) Color(0xFFFFC107) else secondaryTextColor,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = note.description,
-                        fontSize = 14.sp,
-                        color = secondaryTextColor
+                        text = note.title,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = textColor,
+                        modifier = Modifier.weight(1f)
                     )
+                }
+                Row {
+                    IconButton(onClick = onEdit) {
+                        Icon(
+                            imageVector = Icons.Default.Edit,
+                            contentDescription = "Editar nota",
+                            tint = accentColor,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                    IconButton(onClick = onDelete) {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = "Eliminar nota",
+                            tint = Color(0xFFE53935),
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
                 }
             }
-            Row {
-                IconButton(onClick = onEdit) {
-                    Icon(
-                        imageVector = Icons.Default.Edit,
-                        contentDescription = "Editar nota",
-                        tint = accentColor,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-                IconButton(onClick = onDelete) {
-                    Icon(
-                        imageVector = Icons.Default.Delete,
-                        contentDescription = "Eliminar nota",
-                        tint = Color(0xFFE53935),
-                        modifier = Modifier.size(20.dp)
+
+            if (note.description.isNotBlank()) {
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = note.description,
+                    fontSize = 14.sp,
+                    color = secondaryTextColor,
+                    lineHeight = 20.sp
+                )
+            }
+
+            if (!note.dueDate.isNullOrBlank()) {
+                Spacer(modifier = Modifier.height(10.dp))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .background(accentColor.copy(alpha = 0.1f), shape = RoundedCornerShape(8.dp))
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                ) {
+                    Text(
+                        text = "📅 Vence: ${note.dueDate}",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = accentColor
                     )
                 }
             }
