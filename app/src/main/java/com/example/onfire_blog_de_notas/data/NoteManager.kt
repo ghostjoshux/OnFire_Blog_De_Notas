@@ -2,6 +2,7 @@ package com.example.onfire_blog_de_notas.data
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.widget.Toast
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import org.json.JSONArray
@@ -77,53 +78,68 @@ object NoteManager {
         return context.getSharedPreferences("${PREF_NAME}_$userId", Context.MODE_PRIVATE)
     }
 
-    private fun syncToFirestore(notes: List<NoteItem>, contacts: List<ContactItem>) {
+    private fun syncNotesToFirestore(context: Context, notes: List<NoteItem>) {
         val userId = getUserId() ?: return
         try {
             val db = FirebaseFirestore.getInstance()
-
             val notesMap = notes.map { it.toMap() }
             db.collection("users").document(userId).collection("notes").document("all_notes")
                 .set(mapOf("list" to notesMap))
-
-            val contactsMap = contacts.map { it.toMap() }
-            db.collection("users").document(userId).collection("contacts").document("all_contacts")
-                .set(mapOf("list" to contactsMap))
+                .addOnFailureListener {
+                    Toast.makeText(context, "Error al sincronizar notas con la nube", Toast.LENGTH_SHORT).show()
+                }
         } catch (_: Throwable) {}
     }
 
-    fun getNotes(context: Context): List<NoteItem> {
+    private fun syncContactsToFirestore(context: Context, contacts: List<ContactItem>) {
+        val userId = getUserId() ?: return
+        try {
+            val db = FirebaseFirestore.getInstance()
+            val contactsMap = contacts.map { it.toMap() }
+            db.collection("users").document(userId).collection("contacts").document("all_contacts")
+                .set(mapOf("list" to contactsMap))
+                .addOnFailureListener {
+                    Toast.makeText(context, "Error al sincronizar contactos con la nube", Toast.LENGTH_SHORT).show()
+                }
+        } catch (_: Throwable) {}
+    }
+
+    fun getNotes(context: Context, onRemoteUpdated: ((List<NoteItem>) -> Unit)? = null): List<NoteItem> {
         val userId = getUserId()
         if (userId == null) return emptyList()
 
-        val jsonStr = getPrefs(context).getString("notes_json", null) ?: return emptyList()
-        val list = try {
-            val array = JSONArray(jsonStr)
-            val mutableList = mutableListOf<NoteItem>()
-            for (i in 0 until array.length()) {
-                val obj = array.getJSONObject(i)
-                val dDate = if (obj.has("dueDate") && !obj.isNull("dueDate")) obj.getString("dueDate") else null
-                mutableList.add(
-                    NoteItem(
-                        id = obj.optString("id"),
-                        title = obj.optString("title"),
-                        description = obj.optString("description"),
-                        timestamp = obj.optLong("timestamp"),
-                        dueDate = if (dDate.isNullOrBlank()) null else dDate,
-                        isImportant = obj.optBoolean("isImportant", false)
+        val jsonStr = getPrefs(context).getString("notes_json", null)
+        val localList = if (jsonStr != null) {
+            try {
+                val array = JSONArray(jsonStr)
+                val mutableList = mutableListOf<NoteItem>()
+                for (i in 0 until array.length()) {
+                    val obj = array.getJSONObject(i)
+                    val dDate = if (obj.has("dueDate") && !obj.isNull("dueDate")) obj.getString("dueDate") else null
+                    mutableList.add(
+                        NoteItem(
+                            id = obj.optString("id"),
+                            title = obj.optString("title"),
+                            description = obj.optString("description"),
+                            timestamp = obj.optLong("timestamp"),
+                            dueDate = if (dDate.isNullOrBlank()) null else dDate,
+                            isImportant = obj.optBoolean("isImportant", false)
+                        )
                     )
-                )
+                }
+                mutableList
+            } catch (e: Exception) {
+                emptyList()
             }
-            mutableList
-        } catch (e: Exception) {
+        } else {
             emptyList()
         }
 
-        fetchNotesFromFirestore(context)
-        return list
+        fetchNotesFromFirestore(context, onRemoteUpdated)
+        return localList
     }
 
-    private fun fetchNotesFromFirestore(context: Context) {
+    private fun fetchNotesFromFirestore(context: Context, onRemoteUpdated: ((List<NoteItem>) -> Unit)?) {
         val userId = getUserId() ?: return
         try {
             FirebaseFirestore.getInstance().collection("users").document(userId).collection("notes").document("all_notes")
@@ -135,14 +151,51 @@ object NoteManager {
                             val notes = listData.mapNotNull { item ->
                                 (item as? Map<*, *>)?.let { NoteItem.fromMap(it) }
                             }
-                            saveNotesLocal(context, notes)
+                            if (notes.isNotEmpty()) {
+                                saveNotesLocal(context, notes)
+                                onRemoteUpdated?.invoke(notes)
+                            }
                         }
                     }
+                }
+                .addOnFailureListener {
+                    Toast.makeText(context, "Error de sincronización con la nube", Toast.LENGTH_SHORT).show()
                 }
         } catch (_: Throwable) {}
     }
 
-    private fun fetchContactsFromFirestore(context: Context) {
+    fun getContacts(context: Context, onRemoteUpdated: ((List<ContactItem>) -> Unit)? = null): List<ContactItem> {
+        val userId = getUserId()
+        if (userId == null) return emptyList()
+
+        val jsonStr = getPrefs(context).getString("contacts_json", null)
+        val localList = if (jsonStr != null) {
+            try {
+                val array = JSONArray(jsonStr)
+                val mutableList = mutableListOf<ContactItem>()
+                for (i in 0 until array.length()) {
+                    val obj = array.getJSONObject(i)
+                    mutableList.add(
+                        ContactItem(
+                            id = obj.optString("id"),
+                            name = obj.optString("name"),
+                            phoneOrEmail = obj.optString("phoneOrEmail")
+                        )
+                    )
+                }
+                mutableList
+            } catch (e: Exception) {
+                emptyList()
+            }
+        } else {
+            emptyList()
+        }
+
+        fetchContactsFromFirestore(context, onRemoteUpdated)
+        return localList
+    }
+
+    private fun fetchContactsFromFirestore(context: Context, onRemoteUpdated: ((List<ContactItem>) -> Unit)?) {
         val userId = getUserId() ?: return
         try {
             FirebaseFirestore.getInstance().collection("users").document(userId).collection("contacts").document("all_contacts")
@@ -154,9 +207,15 @@ object NoteManager {
                             val contacts = listData.mapNotNull { item ->
                                 (item as? Map<*, *>)?.let { ContactItem.fromMap(it) }
                             }
-                            saveContactsLocal(context, contacts)
+                            if (contacts.isNotEmpty()) {
+                                saveContactsLocal(context, contacts)
+                                onRemoteUpdated?.invoke(contacts)
+                            }
                         }
                     }
+                }
+                .addOnFailureListener {
+                    Toast.makeText(context, "Error de sincronización con la nube", Toast.LENGTH_SHORT).show()
                 }
         } catch (_: Throwable) {}
     }
@@ -223,34 +282,7 @@ object NoteManager {
 
     private fun saveNotes(context: Context, notes: List<NoteItem>) {
         saveNotesLocal(context, notes)
-        syncToFirestore(notes, getContacts(context))
-    }
-
-    fun getContacts(context: Context): List<ContactItem> {
-        val userId = getUserId()
-        if (userId == null) return emptyList()
-
-        val jsonStr = getPrefs(context).getString("contacts_json", null) ?: return emptyList()
-        val list = try {
-            val array = JSONArray(jsonStr)
-            val mutableList = mutableListOf<ContactItem>()
-            for (i in 0 until array.length()) {
-                val obj = array.getJSONObject(i)
-                mutableList.add(
-                    ContactItem(
-                        id = obj.optString("id"),
-                        name = obj.optString("name"),
-                        phoneOrEmail = obj.optString("phoneOrEmail")
-                    )
-                )
-            }
-            mutableList
-        } catch (e: Exception) {
-            emptyList()
-        }
-
-        fetchContactsFromFirestore(context)
-        return list
+        syncNotesToFirestore(context, notes)
     }
 
     fun addContact(context: Context, name: String, phoneOrEmail: String): List<ContactItem> {
@@ -295,6 +327,6 @@ object NoteManager {
 
     private fun saveContacts(context: Context, contacts: List<ContactItem>) {
         saveContactsLocal(context, contacts)
-        syncToFirestore(getNotes(context), contacts)
+        syncContactsToFirestore(context, contacts)
     }
 }
