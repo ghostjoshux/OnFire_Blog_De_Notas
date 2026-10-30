@@ -54,6 +54,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
@@ -155,7 +156,7 @@ fun HomeScreen(
 
     val currentUser = try { AuthManager.currentUser } catch (_: Throwable) { null }
     val userEmail = currentUser?.email ?: ""
-    val rawName = currentUser?.displayName ?: AuthManager.getUserName(context, userEmail) ?: "Fio"
+    val rawName = currentUser?.displayName ?: currentUser?.email?.substringBefore("@") ?: "Fio"
     val displayName = if (rawName.isNotBlank()) rawName.trim().substringBefore(" ") else "Fio"
 
     var notesList by remember { mutableStateOf(NoteManager.getNotes(context)) }
@@ -169,6 +170,7 @@ fun HomeScreen(
     var editingNote by remember { mutableStateOf<NoteItem?>(null) }
     var editingContact by remember { mutableStateOf<ContactItem?>(null) }
     var selectedContactAction by remember { mutableStateOf<ContactItem?>(null) }
+    var selectedNoteDetail by remember { mutableStateOf<NoteItem?>(null) }
 
     Box(
         modifier = Modifier
@@ -320,6 +322,7 @@ fun HomeScreen(
                                     textColor = textColor,
                                     secondaryTextColor = secondaryTextColor,
                                     accentColor = accentColor,
+                                    onClick = { selectedNoteDetail = note },
                                     onToggleImportant = {
                                         notesList = NoteManager.toggleImportant(context, note.id)
                                     },
@@ -377,6 +380,7 @@ fun HomeScreen(
                                     textColor = textColor,
                                     secondaryTextColor = secondaryTextColor,
                                     accentColor = accentColor,
+                                    onClick = { selectedNoteDetail = note },
                                     onToggleImportant = {
                                         notesList = NoteManager.toggleImportant(context, note.id)
                                     },
@@ -581,7 +585,7 @@ fun HomeScreen(
             }
         }
 
-        // Dialog: Create Note
+        // Dialog: Create Note (with Validation)
         if (showCreateNoteDialog) {
             var titleInput by remember { mutableStateOf("") }
             var descInput by remember { mutableStateOf("") }
@@ -602,7 +606,7 @@ fun HomeScreen(
                         OutlinedTextField(
                             value = titleInput,
                             onValueChange = { titleInput = it },
-                            label = { Text("Título") },
+                            label = { Text("Título *") },
                             placeholder = { Text("Ej. Reunión de proyecto") },
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = accentColor,
@@ -691,7 +695,7 @@ fun HomeScreen(
                                 Toast.makeText(context, "Nota creada con éxito", Toast.LENGTH_SHORT).show()
                                 showCreateNoteDialog = false
                             } else {
-                                Toast.makeText(context, "Ingresa un título para la nota", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, "El título de la nota es obligatorio", Toast.LENGTH_SHORT).show()
                             }
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = accentColor)
@@ -709,7 +713,7 @@ fun HomeScreen(
             )
         }
 
-        // Dialog: Edit Note
+        // Dialog: Edit Note (with Validation)
         editingNote?.let { note ->
             var titleInput by remember { mutableStateOf(note.title) }
             var descInput by remember { mutableStateOf(note.description) }
@@ -730,7 +734,7 @@ fun HomeScreen(
                         OutlinedTextField(
                             value = titleInput,
                             onValueChange = { titleInput = it },
-                            label = { Text("Título") },
+                            label = { Text("Título *") },
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = accentColor,
                                 focusedLabelColor = accentColor
@@ -817,7 +821,7 @@ fun HomeScreen(
                                 Toast.makeText(context, "Nota actualizada", Toast.LENGTH_SHORT).show()
                                 editingNote = null
                             } else {
-                                Toast.makeText(context, "El título no puede estar vacío", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, "El título de la nota es obligatorio", Toast.LENGTH_SHORT).show()
                             }
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = accentColor)
@@ -835,7 +839,88 @@ fun HomeScreen(
             )
         }
 
-        // Dialog: Add Contact
+        // Dialog: Note Detail View (Requirement 5)
+        selectedNoteDetail?.let { note ->
+            AlertDialog(
+                onDismissRequest = { selectedNoteDetail = null },
+                title = {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = note.title,
+                            fontWeight = FontWeight.Bold,
+                            color = textColor,
+                            modifier = Modifier.weight(1f)
+                        )
+                        if (note.isImportant) {
+                            Icon(
+                                imageVector = Icons.Default.Star,
+                                contentDescription = "Importante",
+                                tint = Color(0xFFFFC107)
+                            )
+                        }
+                    }
+                },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        if (note.description.isNotBlank()) {
+                            Text(
+                                text = note.description,
+                                fontSize = 16.sp,
+                                color = textColor,
+                                lineHeight = 22.sp
+                            )
+                        } else {
+                            Text(
+                                text = "Sin descripción",
+                                fontSize = 14.sp,
+                                color = secondaryTextColor,
+                                fontStyle = FontStyle.Italic
+                            )
+                        }
+
+                        if (!note.dueDate.isNullOrBlank()) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier
+                                    .background(accentColor.copy(alpha = 0.1f), shape = RoundedCornerShape(8.dp))
+                                    .padding(horizontal = 8.dp, vertical = 4.dp)
+                            ) {
+                                Text(
+                                    text = "📅 Fecha límite: ${note.dueDate}",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = accentColor
+                                )
+                            }
+                        }
+                    }
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            selectedNoteDetail = null
+                            editingNote = note
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = accentColor)
+                    ) {
+                        Text("Editar nota", color = Color.White)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { selectedNoteDetail = null }) {
+                        Text("Cerrar", color = secondaryTextColor)
+                    }
+                },
+                containerColor = cardColor,
+                shape = RoundedCornerShape(24.dp)
+            )
+        }
+
+        // Dialog: Add Contact (with Validation)
         if (showAddContactDialog) {
             var nameInput by remember { mutableStateOf("") }
             var selectedCode by remember { mutableStateOf("+51") }
@@ -856,7 +941,7 @@ fun HomeScreen(
                         OutlinedTextField(
                             value = nameInput,
                             onValueChange = { nameInput = it },
-                            label = { Text("Nombre") },
+                            label = { Text("Nombre *") },
                             placeholder = { Text("Ej. Jorge") },
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = accentColor,
@@ -911,7 +996,7 @@ fun HomeScreen(
                                         phoneInput = input
                                     }
                                 },
-                                label = { Text("Teléfono") },
+                                label = { Text("Teléfono *") },
                                 placeholder = { Text("987654321") },
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                                 colors = OutlinedTextFieldDefaults.colors(
@@ -927,13 +1012,13 @@ fun HomeScreen(
                 confirmButton = {
                     Button(
                         onClick = {
-                            if (nameInput.isNotBlank()) {
-                                val fullPhone = if (phoneInput.isNotBlank()) "$selectedCode $phoneInput" else ""
+                            if (nameInput.isNotBlank() && phoneInput.isNotBlank()) {
+                                val fullPhone = "$selectedCode $phoneInput"
                                 contactsList = NoteManager.addContact(context, nameInput.trim(), fullPhone)
                                 Toast.makeText(context, "Contacto agregado con éxito", Toast.LENGTH_SHORT).show()
                                 showAddContactDialog = false
                             } else {
-                                Toast.makeText(context, "Ingresa el nombre del contacto", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, "El nombre y el teléfono son obligatorios", Toast.LENGTH_SHORT).show()
                             }
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = accentColor)
@@ -951,7 +1036,7 @@ fun HomeScreen(
             )
         }
 
-        // Dialog: Edit Contact
+        // Dialog: Edit Contact (with Validation)
         editingContact?.let { contact ->
             var nameInput by remember { mutableStateOf(contact.name) }
             val parsed = parsePhone(contact.phoneOrEmail)
@@ -973,7 +1058,7 @@ fun HomeScreen(
                         OutlinedTextField(
                             value = nameInput,
                             onValueChange = { nameInput = it },
-                            label = { Text("Nombre") },
+                            label = { Text("Nombre *") },
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = accentColor,
                                 focusedLabelColor = accentColor
@@ -1027,7 +1112,7 @@ fun HomeScreen(
                                         phoneInput = input
                                     }
                                 },
-                                label = { Text("Teléfono") },
+                                label = { Text("Teléfono *") },
                                 placeholder = { Text("987654321") },
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                                 colors = OutlinedTextFieldDefaults.colors(
@@ -1043,13 +1128,13 @@ fun HomeScreen(
                 confirmButton = {
                     Button(
                         onClick = {
-                            if (nameInput.isNotBlank()) {
-                                val fullPhone = if (phoneInput.isNotBlank()) "$selectedCode $phoneInput" else ""
+                            if (nameInput.isNotBlank() && phoneInput.isNotBlank()) {
+                                val fullPhone = "$selectedCode $phoneInput"
                                 contactsList = NoteManager.updateContact(context, contact.id, nameInput.trim(), fullPhone)
                                 Toast.makeText(context, "Contacto actualizado", Toast.LENGTH_SHORT).show()
                                 editingContact = null
                             } else {
-                                Toast.makeText(context, "El nombre no puede estar vacío", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, "El nombre y el teléfono son obligatorios", Toast.LENGTH_SHORT).show()
                             }
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = accentColor)
@@ -1067,7 +1152,7 @@ fun HomeScreen(
             )
         }
 
-        // Dialog: Contact Actions (Call, WhatsApp)
+        // Dialog: Contact Actions (Call, WhatsApp, SMS)
         selectedContactAction?.let { contact ->
             AlertDialog(
                 onDismissRequest = { selectedContactAction = null },
@@ -1174,6 +1259,7 @@ fun NoteCardItem(
     textColor: Color,
     secondaryTextColor: Color,
     accentColor: Color,
+    onClick: () -> Unit,
     onToggleImportant: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit
@@ -1186,7 +1272,8 @@ fun NoteCardItem(
                 shape = RoundedCornerShape(20.dp),
                 ambientColor = Color.Black.copy(alpha = 0.02f),
                 spotColor = Color.Black.copy(alpha = 0.04f)
-            ),
+            )
+            .clickable(onClick = onClick),
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = cardColor)
     ) {

@@ -63,24 +63,23 @@ data class ContactItem(
 
 object NoteManager {
     private const val PREF_NAME = "onfire_notes_prefs"
-    private const val KEY_NOTES = "notes_json"
-    private const val KEY_CONTACTS = "contacts_json"
 
-    private fun getPrefs(context: Context): SharedPreferences {
-        return context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
-    }
-
-    private fun getUserId(): String {
+    private fun getUserId(): String? {
         return try {
-            FirebaseAuth.getInstance().currentUser?.uid ?: "default_user"
+            FirebaseAuth.getInstance().currentUser?.uid
         } catch (_: Throwable) {
-            "default_user"
+            null
         }
     }
 
+    private fun getPrefs(context: Context): SharedPreferences {
+        val userId = getUserId() ?: "guest"
+        return context.getSharedPreferences("${PREF_NAME}_$userId", Context.MODE_PRIVATE)
+    }
+
     private fun syncToFirestore(notes: List<NoteItem>, contacts: List<ContactItem>) {
+        val userId = getUserId() ?: return
         try {
-            val userId = getUserId()
             val db = FirebaseFirestore.getInstance()
 
             val notesMap = notes.map { it.toMap() }
@@ -94,7 +93,10 @@ object NoteManager {
     }
 
     fun getNotes(context: Context): List<NoteItem> {
-        val jsonStr = getPrefs(context).getString(KEY_NOTES, null) ?: return emptyList()
+        val userId = getUserId()
+        if (userId == null) return emptyList()
+
+        val jsonStr = getPrefs(context).getString("notes_json", null) ?: return emptyList()
         val list = try {
             val array = JSONArray(jsonStr)
             val mutableList = mutableListOf<NoteItem>()
@@ -122,8 +124,8 @@ object NoteManager {
     }
 
     private fun fetchNotesFromFirestore(context: Context) {
+        val userId = getUserId() ?: return
         try {
-            val userId = getUserId()
             FirebaseFirestore.getInstance().collection("users").document(userId).collection("notes").document("all_notes")
                 .get()
                 .addOnSuccessListener { document ->
@@ -141,8 +143,8 @@ object NoteManager {
     }
 
     private fun fetchContactsFromFirestore(context: Context) {
+        val userId = getUserId() ?: return
         try {
-            val userId = getUserId()
             FirebaseFirestore.getInstance().collection("users").document(userId).collection("contacts").document("all_contacts")
                 .get()
                 .addOnSuccessListener { document ->
@@ -160,6 +162,7 @@ object NoteManager {
     }
 
     fun addNote(context: Context, title: String, description: String, dueDate: String?, isImportant: Boolean): List<NoteItem> {
+        if (getUserId() == null) return emptyList()
         val current = getNotes(context).toMutableList()
         current.add(0, NoteItem(title = title, description = description, dueDate = dueDate, isImportant = isImportant))
         saveNotes(context, current)
@@ -167,6 +170,7 @@ object NoteManager {
     }
 
     fun updateNote(context: Context, id: String, title: String, description: String, dueDate: String?, isImportant: Boolean): List<NoteItem> {
+        if (getUserId() == null) return emptyList()
         val current = getNotes(context).toMutableList()
         val index = current.indexOfFirst { it.id == id }
         if (index != -1) {
@@ -182,6 +186,7 @@ object NoteManager {
     }
 
     fun toggleImportant(context: Context, id: String): List<NoteItem> {
+        if (getUserId() == null) return emptyList()
         val current = getNotes(context).toMutableList()
         val index = current.indexOfFirst { it.id == id }
         if (index != -1) {
@@ -193,6 +198,7 @@ object NoteManager {
     }
 
     fun deleteNote(context: Context, id: String): List<NoteItem> {
+        if (getUserId() == null) return emptyList()
         val current = getNotes(context).toMutableList()
         current.removeAll { it.id == id }
         saveNotes(context, current)
@@ -200,6 +206,7 @@ object NoteManager {
     }
 
     private fun saveNotesLocal(context: Context, notes: List<NoteItem>) {
+        if (getUserId() == null) return
         val array = JSONArray()
         for (note in notes) {
             val obj = JSONObject()
@@ -211,7 +218,7 @@ object NoteManager {
             obj.put("isImportant", note.isImportant)
             array.put(obj)
         }
-        getPrefs(context).edit().putString(KEY_NOTES, array.toString()).apply()
+        getPrefs(context).edit().putString("notes_json", array.toString()).apply()
     }
 
     private fun saveNotes(context: Context, notes: List<NoteItem>) {
@@ -220,7 +227,10 @@ object NoteManager {
     }
 
     fun getContacts(context: Context): List<ContactItem> {
-        val jsonStr = getPrefs(context).getString(KEY_CONTACTS, null) ?: return emptyList()
+        val userId = getUserId()
+        if (userId == null) return emptyList()
+
+        val jsonStr = getPrefs(context).getString("contacts_json", null) ?: return emptyList()
         val list = try {
             val array = JSONArray(jsonStr)
             val mutableList = mutableListOf<ContactItem>()
@@ -244,6 +254,7 @@ object NoteManager {
     }
 
     fun addContact(context: Context, name: String, phoneOrEmail: String): List<ContactItem> {
+        if (getUserId() == null) return emptyList()
         val current = getContacts(context).toMutableList()
         current.add(0, ContactItem(name = name, phoneOrEmail = phoneOrEmail))
         saveContacts(context, current)
@@ -251,6 +262,7 @@ object NoteManager {
     }
 
     fun updateContact(context: Context, id: String, name: String, phoneOrEmail: String): List<ContactItem> {
+        if (getUserId() == null) return emptyList()
         val current = getContacts(context).toMutableList()
         val index = current.indexOfFirst { it.id == id }
         if (index != -1) {
@@ -261,6 +273,7 @@ object NoteManager {
     }
 
     fun deleteContact(context: Context, id: String): List<ContactItem> {
+        if (getUserId() == null) return emptyList()
         val current = getContacts(context).toMutableList()
         current.removeAll { it.id == id }
         saveContacts(context, current)
@@ -268,6 +281,7 @@ object NoteManager {
     }
 
     private fun saveContactsLocal(context: Context, contacts: List<ContactItem>) {
+        if (getUserId() == null) return
         val array = JSONArray()
         for (contact in contacts) {
             val obj = JSONObject()
@@ -276,7 +290,7 @@ object NoteManager {
             obj.put("phoneOrEmail", contact.phoneOrEmail)
             array.put(obj)
         }
-        getPrefs(context).edit().putString(KEY_CONTACTS, array.toString()).apply()
+        getPrefs(context).edit().putString("contacts_json", array.toString()).apply()
     }
 
     private fun saveContacts(context: Context, contacts: List<ContactItem>) {

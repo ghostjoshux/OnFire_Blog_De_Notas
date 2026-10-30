@@ -53,31 +53,18 @@ class MainActivity : ComponentActivity() {
                                     Toast.makeText(context, "¡Bienvenido/a ${userName ?: userEmail}!", Toast.LENGTH_SHORT).show()
                                     currentScreen = AppScreen.HOME
                                 } else {
-                                    val email = userEmail ?: account.email ?: ""
-                                    val name = userName ?: account.displayName ?: email.substringBefore("@")
-                                    AuthManager.saveLocalUser(context, name, email)
-                                    Toast.makeText(context, "¡Bienvenido/a $name!", Toast.LENGTH_SHORT).show()
-                                    currentScreen = AppScreen.HOME
+                                    Toast.makeText(context, errorMessage ?: "Error de autenticación con Firebase", Toast.LENGTH_LONG).show()
                                 }
                             }
                         } else {
-                            val email = account?.email ?: ""
-                            val name = account?.displayName ?: email.substringBefore("@")
-                            AuthManager.saveLocalUser(context, name, email)
-                            Toast.makeText(context, "¡Bienvenido/a $name!", Toast.LENGTH_SHORT).show()
-                            currentScreen = AppScreen.HOME
+                            Toast.makeText(context, "Error: No se obtuvo el token de Google", Toast.LENGTH_LONG).show()
                         }
-                    } catch (_: ApiException) {
-                        // Fallback local so user is never blocked
-                        val email = "usuario@google.com"
-                        val name = "Usuario Google"
-                        AuthManager.saveLocalUser(context, name, email)
+                    } catch (e: ApiException) {
                         Toast.makeText(
                             context,
-                            "¡Bienvenido/a $name!",
+                            "Error al iniciar sesión con Google (${e.statusCode}). Verifica la configuración de Firebase y SHA-1.",
                             Toast.LENGTH_LONG
                         ).show()
-                        currentScreen = AppScreen.HOME
                     } catch (e: Exception) {
                         Toast.makeText(context, "Error: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
                     }
