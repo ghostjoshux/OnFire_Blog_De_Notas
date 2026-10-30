@@ -3,7 +3,6 @@ package com.example.onfire_blog_de_notas
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -86,13 +85,6 @@ class MainActivity : ComponentActivity() {
                         }
                     } catch (e: Exception) {
                         Toast.makeText(context, "Error al iniciar Google Sign-In: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
-                    }
-                }
-
-                // Handle system back button
-                if (currentScreen != AppScreen.WELCOME) {
-                    BackHandler {
-                        currentScreen = AppScreen.WELCOME
                     }
                 }
 
