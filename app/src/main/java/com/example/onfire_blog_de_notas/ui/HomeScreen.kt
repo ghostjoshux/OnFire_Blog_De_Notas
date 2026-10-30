@@ -1131,6 +1131,27 @@ fun HomeScreen(
                         ) {
                             Text("💬 Escribir por WhatsApp", color = Color.White, fontWeight = FontWeight.Bold)
                         }
+
+                        // Option 3: SMS
+                        Button(
+                            onClick = {
+                                selectedContactAction = null
+                                val phoneStr = contact.phoneOrEmail.trim()
+                                val intent = Intent(Intent.ACTION_SENDTO, Uri.parse("smsto:$phoneStr"))
+                                try {
+                                    context.startActivity(intent)
+                                } catch (_: Exception) {
+                                    Toast.makeText(context, "No se pudo abrir la aplicación de mensajes", Toast.LENGTH_SHORT).show()
+                                }
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(48.dp),
+                            shape = RoundedCornerShape(14.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0084FF), contentColor = Color.White)
+                        ) {
+                            Text("✉️ Enviar mensaje SMS", color = Color.White, fontWeight = FontWeight.Bold)
+                        }
                     }
                 },
                 confirmButton = {},
