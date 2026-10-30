@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "621782365839-jdn75reuf2c0fd1bsq5vne0p01l2h1mb.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.onfire_blog_de_notas",
+            "certificate_hash": "ad819ceae1fd6cdfb60b810abd00b1db2de9cee9"
+          }
+        },
+        {
           "client_id": "621782365839-svm3f3j55740p4dbe0og7skitf4nmt1k.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
