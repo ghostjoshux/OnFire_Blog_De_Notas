@@ -140,26 +140,29 @@ object NoteManager {
     }
 
     private fun fetchNotesFromFirestore(context: Context, onRemoteUpdated: ((List<NoteItem>) -> Unit)?) {
-        val userId = getUserId() ?: return
+        val expectedUserId = getUserId() ?: return
         try {
-            FirebaseFirestore.getInstance().collection("users").document(userId).collection("notes").document("all_notes")
+            FirebaseFirestore.getInstance().collection("users").document(expectedUserId).collection("notes").document("all_notes")
                 .get()
                 .addOnSuccessListener { document ->
+                    // Prevent mixing data if user changed accounts while call was in flight
+                    if (getUserId() != expectedUserId) return@addOnSuccessListener
+
                     if (document != null && document.exists()) {
                         val listData = document.get("list") as? List<*>
                         if (listData != null) {
                             val notes = listData.mapNotNull { item ->
                                 (item as? Map<*, *>)?.let { NoteItem.fromMap(it) }
                             }
-                            if (notes.isNotEmpty()) {
-                                saveNotesLocal(context, notes)
-                                onRemoteUpdated?.invoke(notes)
-                            }
+                            saveNotesLocal(context, notes)
+                            onRemoteUpdated?.invoke(notes)
                         }
                     }
                 }
                 .addOnFailureListener {
-                    Toast.makeText(context, "Error de sincronización con la nube", Toast.LENGTH_SHORT).show()
+                    if (getUserId() == expectedUserId) {
+                        Toast.makeText(context, "Error al descargar notas de la nube", Toast.LENGTH_SHORT).show()
+                    }
                 }
         } catch (_: Throwable) {}
     }
@@ -196,26 +199,29 @@ object NoteManager {
     }
 
     private fun fetchContactsFromFirestore(context: Context, onRemoteUpdated: ((List<ContactItem>) -> Unit)?) {
-        val userId = getUserId() ?: return
+        val expectedUserId = getUserId() ?: return
         try {
-            FirebaseFirestore.getInstance().collection("users").document(userId).collection("contacts").document("all_contacts")
+            FirebaseFirestore.getInstance().collection("users").document(expectedUserId).collection("contacts").document("all_contacts")
                 .get()
                 .addOnSuccessListener { document ->
+                    // Prevent mixing data if user changed accounts while call was in flight
+                    if (getUserId() != expectedUserId) return@addOnSuccessListener
+
                     if (document != null && document.exists()) {
                         val listData = document.get("list") as? List<*>
                         if (listData != null) {
                             val contacts = listData.mapNotNull { item ->
                                 (item as? Map<*, *>)?.let { ContactItem.fromMap(it) }
                             }
-                            if (contacts.isNotEmpty()) {
-                                saveContactsLocal(context, contacts)
-                                onRemoteUpdated?.invoke(contacts)
-                            }
+                            saveContactsLocal(context, contacts)
+                            onRemoteUpdated?.invoke(contacts)
                         }
                     }
                 }
                 .addOnFailureListener {
-                    Toast.makeText(context, "Error de sincronización con la nube", Toast.LENGTH_SHORT).show()
+                    if (getUserId() == expectedUserId) {
+                        Toast.makeText(context, "Error al descargar contactos de la nube", Toast.LENGTH_SHORT).show()
+                    }
                 }
         } catch (_: Throwable) {}
     }
